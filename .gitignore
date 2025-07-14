@@ -2,3 +2,4 @@
 dbt/target/
 dbt/dbt_packages/
 gcp_key.json
+gcp_key.json
