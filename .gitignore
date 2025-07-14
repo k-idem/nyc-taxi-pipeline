@@ -1,0 +1,3 @@
+# dbt build artefacts
+dbt/target/
+dbt/dbt_packages/
