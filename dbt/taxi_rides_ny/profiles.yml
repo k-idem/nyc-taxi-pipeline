@@ -1,0 +1,11 @@
+zoomcamp_de:
+  target: prod
+  outputs:
+    prod:
+      type: bigquery
+      method: service-account
+      project: zoomcamp-de-463203
+      dataset: zoomcamp_de
+      threads: 4
+      keyfile: /creds/key.json
+      timeout_seconds: 300
