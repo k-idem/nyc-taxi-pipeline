@@ -1,60 +1,62 @@
-# NYC Taxi ✈ – Mini ELT Warehouse  
-GCS ▸ BigQuery ▸ dbt ▸ Kestra
+# NYC Taxi ✈ – Mini ELT Warehouse  
+**GCS → BigQuery → dbt → Kestra**
 
-![Architecture diagram](images/architecture.png)
+A **Docker‑only** showcase that stages raw NYC taxi data in BigQuery, models it with dbt, and orchestrates the whole flow in Kestra—all browsable in your browser.
 
-A fully‑containerised pipeline that lands raw Parquet taxi‑trip files in **Google Cloud Storage**, stages them in **BigQuery**, transforms them with **dbt** and lets you browse lineage & docs on **localhost:8088**.  
-`docker compose up -d` → done in ≈2 min.
-
----
-
-## Table of contents
-1. [Architecture](#-architecture)
-2. [Prerequisites](#-prerequisites)
-3. [Folder layout](#-folder-layout)
-4. [Quick‑start](#-quick‑start)
-5. [Step‑by‑step](#-step‑by‑step)
-6. [Troubleshooting](#-troubleshooting)
+<p align="center">
+  <img src="images/architecture.png" width="420">
+</p>
 
 ---
 
-## Architecture
-![Lineage](images/dbt_lineage.png)
-
-| Layer | Service | How it runs |
-|-------|---------|-------------|
-| **Orchestrator** | Kestra (`server standalone`) | Docker container – <http://localhost:8080> |
-| **Metadata** | Postgres | container, keeps Kestra metadata |
-| **Landing zone** | GCS bucket (`dtc-data-lake‑zoomcamp-de‑463203`) | public Parquet data |
-| **Warehouse** | BigQuery<br>`trips_data_all` (raw) → `zoomcamp_de` (models) | one SA, two datasets |
-| **Transform** | dbt Core 1.8 | CLI container |
-| **Docs** | dbt Docs (Flask) | served on **localhost:8088** |
+## Stack at a Glance
+| Layer | Component | One‑liner |
+|-------|-----------|-----------|
+| **Orchestrator** | **Kestra** | YAML flow triggers load ➜ transform tasks |
+| **Metadata DB** | **Postgres** | Stores Kestra run history |
+| **Landing zone** | **GCS** | Public Parquet files (NYC taxi trips) |
+| **Warehouse** | **BigQuery** | `trips_data_all` (raw) ➜ `zoomcamp_de` (models) |
+| **Transform** | **dbt Core 1.8** | Build + test models in BigQuery |
+| **Docs / Lineage** | **dbt Docs** | Served on **http://localhost:8088** |
 
 ---
 
 ## Prerequisites
-| What | Why | Notes |
-|------|-----|-------|
-| **Docker** & **Docker Compose v2** | run everything | `docker --version` |
-| **gcloud SDK** | optional, create BQ dataset | `gcloud components install` |
-| `gcp_key.json` | SA key with **BigQuery Editor** + **Storage Object Viewer** | put in repo root |
+| Tool / File | Why you need it | Quick check |
+|-------------|-----------------|-------------|
+| **Docker + Compose v2** | run every container | `docker compose version` |
+| **gcloud SDK** (once) | create the BQ dataset | `gcloud --version` |
+| `gcp_key.json` | SA key with:<br>• `roles/bigquery.dataEditor`<br>• `roles/storage.objectViewer` | drop in repo root |
 
-> **Service‑account roles**  
-> *Project `zoomcamp‑de‑463203`*: `roles/bigquery.dataEditor` & `roles/storage.objectViewer`  
-> *Project `taxi‑rides‑ny‑339813`*: `roles/bigquery.dataViewer`
+> **Extra role** – on project **`taxi‑rides‑ny‑339813`** give the same key `roles/bigquery.dataViewer`.
 
 ---
 
-## Folder layout
-nyc-taxi-pipeline/
-├─ docker-compose.yml # all services
-├─ flows/ # Kestra YAML flows
-├─ dbt/ # dbt project (taxi_rides_ny)
-│ ├─ models/…
-│ └─ profiles.yml
-├─ images/ # screenshots & architecture
-├─ gcp_key.json # ← your SA key here
-└─ README.md
+## Quick‑start
+```bash
+# 1. clone & cd
+git clone https://github.com/k-idem/nyc-taxi-pipeline.git
+cd nyc-taxi-pipeline
+
+# 2. add service‑account key
+cp ~/Downloads/my-key.json gcp_key.json
+
+# 3. launch background services (Kestra + Postgres)
+docker compose up -d
+
+# 4. trigger the flow in Kestra UI  OR run dbt directly
+open http://localhost:8080          # Kestra UI
+# – or –
+docker compose run --rm dbt deps
+docker compose run --rm dbt seed
+docker compose run --rm dbt run && \
+docker compose run --rm dbt test
+
+# 5. serve docs
+docker compose run --rm -p 8088:8080 dbt docs serve
+
+# 6. explore!
+open http://localhost:8088          # dbt lineage + catalog
 
 ### Screenshots & diagrams
 
@@ -64,32 +66,3 @@ nyc-taxi-pipeline/
 * [BigQuery tables](images/bq_table.png)
 * [Kestra flow DAG](images/kestra_DAG_view.png)
 * [Kestra Gantt chart](images/kestra_gantt_view.png)
-
-
----
-
-## Quick‑start
-
-```bash
-# 1. clone and cd
-git clone https://github.com/k-idem/nyc-taxi-pipeline.git
-cd nyc-taxi-pipeline
-
-# 2. add your service‑account key
-cp ~/Downloads/my-key.json ./gcp_key.json
-
-# 3. spin everything
-docker compose up -d
-
-# 4. open Kestra (optional)
-open http://localhost:8080
-
-# 5. trigger the flow in UI OR run dbt locally
-docker compose run --rm dbt deps
-docker compose run --rm dbt seed
-docker compose run --rm dbt run && \
-docker compose run --rm dbt test
-docker compose run --rm -p 8088:8080 dbt docs serve
-
-# 6. browse docs & lineage
-open http://localhost:8088
