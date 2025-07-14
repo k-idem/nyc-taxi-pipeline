@@ -58,14 +58,12 @@ nyc-taxi-pipeline/
 
 ### Screenshots & diagrams
 
-| Preview | Purpose |
-|---------|---------|
-| ![Architecture](images/architecture.png) | **End‑to‑end architecture** – high‑level flow |
-| ![Lineage](images/dbt_lineage.png) | **dbt lineage graph** (localhost:8088) |
-| ![dbt run](images/dbt_run.png) | **dbt run + test output** – terminal snapshot |
-| ![BigQuery tables](images/bq_table.png) | **BigQuery dataset view** – resulting tables |
-| ![Kestra DAG](images/kestra_DAG_view.png) | **Kestra flow DAG** – task dependencies |
-| ![Kestra Gantt](images/kestra_gantt_view.png) | **Kestra Gantt chart** – task durations |
+* [Architecture](images/architecture.png)
+* [dbt lineage graph](images/dbt_lineage.png)
+* [dbt run + test output](images/dbt_run.png)
+* [BigQuery tables](images/bq_table.png)
+* [Kestra flow DAG](images/kestra_DAG_view.png)
+* [Kestra Gantt chart](images/kestra_gantt_view.png)
 
 
 ---
