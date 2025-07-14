@@ -1,3 +1,4 @@
 # dbt build artefacts
 dbt/target/
 dbt/dbt_packages/
+gcp_key.json
