@@ -1,36 +1,43 @@
 id: nyc_taxi_capstone
 namespace: zoomcamp
-tasks:
-  # 1 ─ Download January-2023 Yellow Taxi parquet
-  - id: fetch
-    type: io.kestra.plugin.fs.http.Download
-    uri: "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet"
 
-  # 2 ─ Upload to Google Cloud Storage
+tasks:
+
+  - id: fetch
+    type: io.kestra.plugin.core.http.Download
+    uri: https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet
+
+
   - id: upload_gcs
     type: io.kestra.plugin.gcp.gcs.Upload
-    from: "{{ task.fetch.outputs.file }}"
-    to: "gs://{{ secret('GCP_BUCKET_NAME') }}/yellow/2023/01/yellow_2023_01.parquet"
-    projectId: "{{ secret('GCP_PROJECT_ID') }}"
-    serviceAccount: "{{ secret('GCP_CREDS') }}"
+    from: "{{ outputs.fetch.uri }}"
+    to: gs://dtc-data-lake-zoomcamp-de-463203/yellow/2023/01/yellow_2023_01.parquet
+    projectId: zoomcamp-de-463203
 
-  # 3 ─ Load into BigQuery staging table
+
   - id: bq_load
     type: io.kestra.plugin.gcp.bigquery.Load
-    from: "gs://{{ secret('GCP_BUCKET_NAME') }}/yellow/2023/01/*.parquet"
-    destinationTable: "{{ secret('GCP_DATASET') }}.yellow_2023_part"
+    from: "{{ outputs.fetch.uri }}"
+    destinationTable: zoomcamp_de.yellow_2023_part
     format: PARQUET
     autodetect: true
     writeDisposition: WRITE_TRUNCATE
-    projectId: "{{ secret('GCP_PROJECT_ID') }}"
-    serviceAccount: "{{ secret('GCP_CREDS') }}"
+    projectId: zoomcamp-de-463203
 
-  # 4 ─ Run dbt models & tests
+
   - id: dbt_run
     type: io.kestra.plugin.scripts.shell.Commands
-    runner: PROCESS
+    docker:
+      image: ghcr.io/dbt-labs/dbt-core:1.8.0
+      volumes:
+        - /home/kidem/nyc-taxi-pipeline/dbt:/project
+        - /home/kidem/nyc-taxi-pipeline/gcp_key.json:/creds/gcp_key.json:ro
+
+    env:
+      GOOGLE_APPLICATION_CREDENTIALS: /creds/gcp_key.json
+
     commands:
-      - cd ~/projects/data-engineering-zoomcamp/04-analytics-engineering
-      - source .venv/bin/activate
-      - dbt run   --profiles-dir .
-      - dbt test  --profiles-dir .
+      - cd /project
+      - dbt deps
+      - dbt run
+      - dbt test

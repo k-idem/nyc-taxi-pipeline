@@ -1,62 +1,64 @@
-volumes:
-  postgres-data:
-    driver: local
-  kestra-data:
-    driver: local
+version: "3.9"
+
 
 services:
   postgres:
-    image: postgres
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+    image: postgres:13
     environment:
-      POSTGRES_DB: kestra
       POSTGRES_USER: kestra
       POSTGRES_PASSWORD: k3str4
+      POSTGRES_DB: kestra
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      test: ["CMD-SHELL","pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 30s
       timeout: 10s
       retries: 10
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
   kestra:
     image: kestra/kestra:v0.20.7
-    pull_policy: always
-    user: "root"
     command: server standalone
     volumes:
+      - ./flows:/app/flows
+      - ./dbt:/app/dbt
+      - ./gcp_key.json:/creds/gcp_key.json:ro
       - kestra-data:/app/storage
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/kestra-wd:/tmp/kestra-wd
     environment:
-      KESTRA_CONFIGURATION: |
-        datasources:
-          postgres:
-            url: jdbc:postgresql://postgres:5432/kestra
-            driverClassName: org.postgresql.Driver
-            username: kestra
-            password: k3str4
-        kestra:
-          server:
-            basicAuth:
-              enabled: false
-              username: "admin@kestra.io" # it must be a valid email address
-              password: kestra
-          repository:
-            type: postgres
-          storage:
-            type: local
-            local:
-              basePath: "/app/storage"
-          queue:
-            type: postgres
-          tasks:
-            tmpDir:
-              path: /tmp/kestra-wd/tmp
-          url: http://localhost:8080/
-    ports:
-      - "8080:8080"
-      - "8081:8081"
+      GOOGLE_APPLICATION_CREDENTIALS: /creds/gcp_key.json
     depends_on:
       postgres:
         condition: service_started
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+
+  dbt-cli:
+    image: ghcr.io/dbt-labs/dbt-core:1.8.0
+    working_dir: /project
+    volumes:
+      - ./dbt:/project
+      - ./gcp_key.json:/creds/gcp_key.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /creds/gcp_key.json
+
+  dbt-docs:
+    image: ghcr.io/dbt-labs/dbt-core:1.8.0
+    working_dir: /project
+    command: >
+      bash -c "dbt deps &&
+               dbt docs generate &&
+               dbt docs serve --port 8080 --host 0.0.0.0"
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./dbt:/project
+      - ./gcp_key.json:/creds/gcp_key.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /creds/gcp_key.json
+
+volumes:
+  pg_data:
+  kestra-data:
