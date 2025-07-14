@@ -32,7 +32,7 @@ A fully‑containerised pipeline that lands raw Parquet taxi‑trip files in **G
 
 ---
 
-## 🛠 Prerequisites
+## Prerequisites
 | What | Why | Notes |
 |------|-----|-------|
 | **Docker** & **Docker Compose v2** | run everything | `docker --version` |
