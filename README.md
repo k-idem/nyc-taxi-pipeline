@@ -32,6 +32,18 @@ A **Docker‑only** showcase that stages raw NYC taxi data in BigQuery, models
 
 ---
 
+### Screenshots & diagrams
+
+* [Architecture](images/architecture.png)
+* [dbt lineage graph](images/dbt_lineage.png)
+* [dbt run + test output](images/dbt_run.png)
+* [BigQuery tables](images/bq_table.png)
+* [Kestra flow DAG](images/kestra_DAG_view.png)
+* [Kestra Gantt chart](images/kestra_gantt_view.png)
+
+---
+
+
 ## Quick‑start
 ```bash
 # 1. clone & cd
@@ -58,11 +70,4 @@ docker compose run --rm -p 8088:8080 dbt docs serve
 # 6. explore!
 open http://localhost:8088          # dbt lineage + catalog
 
-### Screenshots & diagrams
 
-* [Architecture](images/architecture.png)
-* [dbt lineage graph](images/dbt_lineage.png)
-* [dbt run + test output](images/dbt_run.png)
-* [BigQuery tables](images/bq_table.png)
-* [Kestra flow DAG](images/kestra_DAG_view.png)
-* [Kestra Gantt chart](images/kestra_gantt_view.png)
