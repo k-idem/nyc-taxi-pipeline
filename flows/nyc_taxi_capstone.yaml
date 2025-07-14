@@ -1,13 +1,12 @@
 id: nyc_taxi_capstone
 namespace: zoomcamp
 tasks:
-  # 1. Download parquet
+  # 1 ─ Download January-2023 Yellow Taxi parquet
   - id: fetch
     type: io.kestra.plugin.fs.http.Download
     uri: "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet"
-    # ↓ plugin now auto-saves to a temp file and exposes it as {{ task.outputs.file }}
 
-  # 2. Upload to your GCS bucket
+  # 2 ─ Upload to Google Cloud Storage
   - id: upload_gcs
     type: io.kestra.plugin.gcp.gcs.Upload
     from: "{{ task.fetch.outputs.file }}"
@@ -15,20 +14,21 @@ tasks:
     projectId: "{{ secret('GCP_PROJECT_ID') }}"
     serviceAccount: "{{ secret('GCP_CREDS') }}"
 
-  # 3. Load into BigQuery staging table
+  # 3 ─ Load into BigQuery staging table
   - id: bq_load
     type: io.kestra.plugin.gcp.bigquery.Load
-    dataset: "{{secret('GCP_DATASET')}}"
-    table: "yellow_2023_part"
-    sourceUris:
-      - "gs://{{secret('GCP_BUCKET_NAME')}}/yellow/2023/01/*.parquet"
-    writeDisposition: "WRITE_TRUNCATE"   # overwrite if table exists
+    from: "gs://{{ secret('GCP_BUCKET_NAME') }}/yellow/2023/01/*.parquet"
+    destinationTable: "{{ secret('GCP_DATASET') }}.yellow_2023_part"
+    format: PARQUET
+    autodetect: true
+    writeDisposition: WRITE_TRUNCATE
     projectId: "{{ secret('GCP_PROJECT_ID') }}"
     serviceAccount: "{{ secret('GCP_CREDS') }}"
 
-  # 4. Run dbt models & tests
+  # 4 ─ Run dbt models & tests
   - id: dbt_run
-    type: io.kestra.plugin.scripts.Bash
+    type: io.kestra.plugin.scripts.shell.Commands
+    runner: PROCESS
     commands:
       - cd ~/projects/data-engineering-zoomcamp/04-analytics-engineering
       - source .venv/bin/activate
