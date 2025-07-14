@@ -82,7 +82,7 @@ cp ~/Downloads/my-key.json ./gcp_key.json
 docker compose up -d
 
 # 4. open Kestra (optional)
-open http://localhost:8080        # or xdg-open / start
+open http://localhost:8080
 
 # 5. trigger the flow in UI OR run dbt locally
 docker compose run --rm dbt deps
