@@ -5,13 +5,12 @@ tasks:
   - id: fetch
     type: io.kestra.plugin.fs.http.Download
     uri: "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet"
-    outputFile: "yellow_2023_01.parquet"
 
   # 2. Upload to your GCS bucket
   - id: upload_gcs
     type: io.kestra.plugin.gcp.gcs.Upload
-    from: "{{task.fetch.outputFile}}"
-    bucket: "{{secret('GCP_BUCKET_NAME')}}"
+    from: "{{ task.fetch.outputs.file }}"
+    bucket: "{{ secret('GCP_BUCKET_NAME') }}"
     key: "yellow/2023/01/yellow_2023_01.parquet"
 
   # 3. Load into BigQuery staging table
