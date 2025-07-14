@@ -1,52 +1,97 @@
-# nyc-taxi-pipeline
+# NYC Taxi ✈ – Mini ELT Warehouse  
+GCS ▸ BigQuery ▸ dbt ▸ Kestra
 
-A compact, end-to-end batch pipeline:
+![Architecture diagram](images/architecture.png)
 
-* **Ingest** — download January-2023 Yellow Taxi data  
-* **Land** — store Parquet in Google Cloud Storage  
-* **Load** — stage into BigQuery (`yellow_2023_part`)  
-* **Transform** — build `dim_*` and `fact_*` tables with dbt  
-* **Orchestrate** — one Kestra flow triggers every step  
+A fully‑containerised pipeline that lands raw Parquet taxi‑trip files in **Google Cloud Storage**, stages them in **BigQuery**, transforms them with **dbt** and lets you browse lineage & docs on **localhost:8088**.  
+`docker compose up -d` → done in ≈2 min.
+
+---
+
+## Table of contents
+1. [Architecture](#-architecture)
+2. [Prerequisites](#-prerequisites)
+3. [Folder layout](#-folder-layout)
+4. [Quick‑start](#-quick‑start)
+5. [Step‑by‑step](#-step‑by‑step)
+6. [Troubleshooting](#-troubleshooting)
 
 ---
 
 ## Architecture
+![Lineage](images/dbt_lineage.png)
 
-![diagram](diagrams/architecture.png)
+| Layer | Service | How it runs |
+|-------|---------|-------------|
+| **Orchestrator** | Kestra (`server standalone`) | Docker container – <http://localhost:8080> |
+| **Metadata** | Postgres | container, keeps Kestra metadata |
+| **Landing zone** | GCS bucket (`dtc-data-lake‑zoomcamp-de‑463203`) | public Parquet data |
+| **Warehouse** | BigQuery<br>`trips_data_all` (raw) → `zoomcamp_de` (models) | one SA, two datasets |
+| **Transform** | dbt Core 1.8 | CLI container |
+| **Docs** | dbt Docs (Flask) | served on **localhost:8088** |
 
 ---
 
-## Quick start
+## 🛠 Prerequisites
+| What | Why | Notes |
+|------|-----|-------|
+| **Docker** & **Docker Compose v2** | run everything | `docker --version` |
+| **gcloud SDK** | optional, create BQ dataset | `gcloud components install` |
+| `gcp_key.json` | SA key with **BigQuery Editor** + **Storage Object Viewer** | put in repo root |
+
+> **Service‑account roles**  
+> *Project `zoomcamp‑de‑463203`*: `roles/bigquery.dataEditor` & `roles/storage.objectViewer`  
+> *Project `taxi‑rides‑ny‑339813`*: `roles/bigquery.dataViewer`
+
+---
+
+## Folder layout
+nyc-taxi-pipeline/
+├─ docker-compose.yml # all services
+├─ flows/ # Kestra YAML flows
+├─ dbt/ # dbt project (taxi_rides_ny)
+│ ├─ models/…
+│ └─ profiles.yml
+├─ images/ # screenshots & architecture
+├─ gcp_key.json # ← your SA key here
+└─ README.md
+
+### Screenshots & diagrams
+
+| Preview | Purpose |
+|---------|---------|
+| ![Architecture](images/architecture.png) | **End‑to‑end architecture** – high‑level flow |
+| ![Lineage](images/dbt_lineage.png) | **dbt lineage graph** (localhost:8088) |
+| ![dbt run](images/dbt_run.png) | **dbt run + test output** – terminal snapshot |
+| ![BigQuery tables](images/bq_table.png) | **BigQuery dataset view** – resulting tables |
+| ![Kestra DAG](images/kestra_DAG_view.png) | **Kestra flow DAG** – task dependencies |
+| ![Kestra Gantt](images/kestra_gantt_view.png) | **Kestra Gantt chart** – task durations |
+
+
+---
+
+## Quick‑start
 
 ```bash
-# spin up Kestra
-cd ~/projects/data-engineering-zoomcamp/02-workflow-orchestration
-docker compose up -d               # -d = detached background run
+# 1. clone and cd
+git clone https://github.com/k-idem/nyc-taxi-pipeline.git
+cd nyc-taxi-pipeline
 
-# Kestra UI → http://localhost:8080
-# 1. Flows ▸ Import  →  flows/nyc_taxi_capstone.yaml
-# 2. Settings ▸ Secrets → add:
-#    GCP_CREDS, GCP_PROJECT_ID, GCP_BUCKET_NAME, GCP_DATASET
-# 3. Click “Run” and watch the DAG turn green
-```
+# 2. add your service‑account key
+cp ~/Downloads/my-key.json ./gcp_key.json
 
----
+# 3. spin everything
+docker compose up -d
 
-## Proof
+# 4. open Kestra (optional)
+open http://localhost:8080        # or xdg-open / start
 
-| Stage          | Screenshot                              |
-|----------------|-----------------------------------------|
-| Kestra DAG     | ![](images/dag.png)                     |
-| BigQuery table | ![](images/bq_table.png)                |
-| dbt lineage    | ![](images/lineage.png)                 |
+# 5. trigger the flow in UI OR run dbt locally
+docker compose run --rm dbt deps
+docker compose run --rm dbt seed
+docker compose run --rm dbt run && \
+docker compose run --rm dbt test
+docker compose run --rm -p 8088:8080 dbt docs serve
 
----
-
-## Clean-up
-
-```bash
-docker compose down                    # stop Kestra stack
-gcloud compute instances list \        # verify no stray VMs
-  --filter="status:RUNNING"
-```
->>>>>>> cf7aa45 (Scaffold project: folders, flow, README stub)
+# 6. browse docs & lineage
+open http://localhost:8088
