@@ -71,3 +71,8 @@ docker compose run --rm -p 8088:8080 dbt docs serve
 open http://localhost:8088          # dbt lineage + catalog
 
 
+Author
+Kenneth Idem
+github.com/k-idem
+
+
