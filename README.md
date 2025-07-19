@@ -69,10 +69,11 @@ docker compose run --rm -p 8088:8080 dbt docs serve
 
 # 6. explore!
 open http://localhost:8088          # dbt lineage + catalog
+```
+---
 
+## Author
 
-Author
-Kenneth Idem
-github.com/k-idem
-
+Kenneth Idem  
+[github.com/k-idem](https://github.com/k-idem)
 
